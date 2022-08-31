@@ -213,7 +213,12 @@ func printBoard(board *Board) {
 				if board.IsBombAt(j, i) {
 					cell = "@"
 				} else {
-					cell = fmt.Sprintf("%d", board.CountBombsAround(j, i))
+					around := board.CountBombsAround(j, i)
+					if around > 0 {
+						cell = fmt.Sprintf("%d", around)
+					} else {
+						cell = " "
+					}
 				}
 			case CellStateMarked:
 				cell = "!"
