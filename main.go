@@ -32,7 +32,7 @@ type Point struct {
 	x, y int
 }
 
-type Board2 struct {
+type Board struct {
 	gameover bool
 	cells    [][]int
 	states   [][]CellState
@@ -41,7 +41,7 @@ type Board2 struct {
 	cursor   *Point
 }
 
-func NewBoard2(width, height int) *Board2 {
+func NewBoard(width, height int) *Board {
 	cells := make([][]int, height)
 	for i := range cells {
 		cells[i] = make([]int, width)
@@ -50,7 +50,7 @@ func NewBoard2(width, height int) *Board2 {
 	for i := range states {
 		states[i] = make([]CellState, width)
 	}
-	return &Board2{
+	return &Board{
 		cells:  cells,
 		states: states,
 		width:  width,
@@ -59,27 +59,19 @@ func NewBoard2(width, height int) *Board2 {
 	}
 }
 
-func (b *Board2) OpenCell(x, y int) bool {
-	if b.cells[y][x] == 1 {
-		b.gameover = true
-	}
-	b.states[y][x] = CellStateOpened
-	return b.gameover
-}
-
-func (b *Board2) GetWidth() int {
+func (b *Board) GetWidth() int {
 	return b.width
 }
 
-func (b *Board2) GetHeight() int {
+func (b *Board) GetHeight() int {
 	return b.height
 }
 
-func (b *Board2) GetCellState(x, y int) CellState {
+func (b *Board) GetCellState(x, y int) CellState {
 	return b.states[y][x]
 }
 
-func (b *Board2) Randomize(bombRate float64) {
+func (b *Board) Randomize(bombRate float64) {
 	bombsCount := math.Floor(float64(b.height*b.width) * (bombRate / 100.0))
 	cnt := 0.0
 	for cnt < bombsCount {
@@ -88,20 +80,64 @@ func (b *Board2) Randomize(bombRate float64) {
 			continue
 		}
 
-		b.cells[y][x] = 1
+		b.PutBombTo(x, y)
 		cnt++
 	}
 }
 
-func (b *Board2) IsCursorAt(x, y int) bool {
+func (b *Board) PutBombTo(x, y int) {
+	b.cells[y][x] = 1
+}
+
+func (b *Board) ResetCells() {
+	for i := 0; i < b.height; i++ {
+		for j := 0; j < b.width; j++ {
+			b.cells[i][j] = 0
+		}
+	}
+}
+
+func (b *Board) OpenCurrentCell() bool {
+	if b.cells[b.cursor.y][b.cursor.x] == 1 {
+		b.gameover = true
+	}
+	b.states[b.cursor.y][b.cursor.x] = CellStateOpened
+	return b.gameover
+}
+
+func (b *Board) OpenAllCells() {
+	for i := 0; i < b.height; i++ {
+		for j := 0; j < b.width; j++ {
+			b.states[i][j] = CellStateOpened
+		}
+	}
+}
+
+func (b *Board) MarkCurrentCell() {
+	state := b.states[b.cursor.y][b.cursor.x]
+	var nstate CellState
+	switch state {
+	case CellStateClosed:
+		nstate = CellStateMarked
+	case CellStateMarked:
+		nstate = CellStateUnknown
+	case CellStateUnknown:
+		nstate = CellStateClosed
+	default:
+		nstate = CellStateClosed
+	}
+	b.states[b.cursor.y][b.cursor.x] = nstate
+}
+
+func (b *Board) IsCursorAt(x, y int) bool {
 	return b.cursor.x == x && b.cursor.y == y
 }
 
-func (b *Board2) IsBombAt(x, y int) bool {
+func (b *Board) IsBombAt(x, y int) bool {
 	return b.cells[y][x] == 1
 }
 
-func (b *Board2) MoveCursor(dx, dy int) {
+func (b *Board) MoveCursor(dx, dy int) {
 	x := b.cursor.x + dx
 	y := b.cursor.y + dy
 
@@ -122,12 +158,16 @@ func (b *Board2) MoveCursor(dx, dy int) {
 	b.cursor.y = y
 }
 
-func (b *Board2) CountBombsAround(x, y int) int {
+func (b *Board) SetCursor(cursor *Point) {
+	b.cursor = cursor
+}
+
+func (b *Board) CountBombsAround(x, y int) int {
 	var res int
 
 	for iy := -1; iy <= 1; iy++ {
 		for ix := -1; ix <= 1; ix++ {
-			if iy != 0 && ix != 0 {
+			if iy != 0 || ix != 0 {
 				nx := x + ix
 				ny := y + iy
 
@@ -143,13 +183,6 @@ func (b *Board2) CountBombsAround(x, y int) int {
 	return res
 }
 
-type Board [HEIGHT][WIDTH]int
-
-var cellState [HEIGHT][WIDTH]CellState
-
-// cursor position
-var cx, cy int
-
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -164,67 +197,31 @@ func max(a, b int) int {
 	return b
 }
 
-func openCell(board *Board, i, j int) bool {
-	cellState[i][j] = CellStateOpened
-	return board[i][j] == 1
-}
-
 func random(from, to int) int {
 	return rand.Intn(to) + from
 }
 
-func putRandomBombs(board *Board) {
-	bombsCount := math.Floor(HEIGHT * WIDTH * (BOMB_RATE / 100.0))
-	cnt := 0.0
-	for cnt < bombsCount {
-		x, y := random(0, WIDTH), random(0, HEIGHT)
-		if board[y][x] == 1 {
-			continue
-		}
-
-		board[y][x] = 1
-		cnt++
-	}
-}
-
-// 0 0 0
-// 0 0 0
-// 0 0 0
-func countBombsAround(board *Board, y, x int) int {
-	var res int
-	for i := -1; i <= 1; i++ {
-		for j := -1; j <= 1; j++ {
-			ny := y + i
-			nx := x + j
-
-			if i != 0 && j != 0 && nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT {
-				if board[ny][nx] == 1 {
-					res++
-				}
-			}
-		}
-	}
-	return res
-}
-
 func printBoard(board *Board) {
 	fmt.Print("\u001B[G")
-	for i := 0; i < len(board); i++ {
-		for j := 0; j < len(board[i]); j++ {
+	for i := 0; i < board.GetHeight(); i++ {
+		for j := 0; j < board.GetWidth(); j++ {
 			var cell string
-			switch cellState[i][j] {
+			switch board.GetCellState(j, i) {
 			case CellStateClosed:
-				cell = "*"
+				cell = "."
 			case CellStateOpened:
-				// case CellStateClosed:
-				if board[i][j] == 1 {
+				if board.IsBombAt(j, i) {
 					cell = "@"
 				} else {
-					cell = fmt.Sprintf("%d", countBombsAround(board, i, j))
+					cell = fmt.Sprintf("%d", board.CountBombsAround(j, i))
 				}
+			case CellStateMarked:
+				cell = "!"
+			case CellStateUnknown:
+				cell = "?"
 			}
 
-			if i == cy && j == cx {
+			if board.IsCursorAt(j, i) {
 				cell = "[" + cell + "]"
 			} else {
 				cell = " " + cell + " "
@@ -240,9 +237,10 @@ func printBoard(board *Board) {
 func loop() {
 	rand.Seed(time.Now().UnixNano())
 
-	var board Board
-	putRandomBombs(&board)
-	printBoard(&board)
+	board := NewBoard(WIDTH, HEIGHT)
+	board.Randomize(BOMB_RATE)
+
+	printBoard(board)
 
 	var reader = bufio.NewReaderSize(os.Stdin, 1)
 	var quit = false
@@ -255,24 +253,26 @@ func loop() {
 
 		switch input {
 		case 'h':
-			cx = max(0, cx-1)
+			board.MoveCursor(-1, 0)
 		case 'j':
-			cy = min(HEIGHT-1, cy+1)
+			board.MoveCursor(0, 1)
 		case 'k':
-			cy = max(0, cy-1)
+			board.MoveCursor(0, -1)
 		case 'l':
-			cx = min(WIDTH-1, cx+1)
+			board.MoveCursor(1, 0)
+		case 'm':
+			board.MarkCurrentCell()
 		case 'q':
 			quit = true
 		case ' ':
-			quit = openCell(&board, cy, cx)
+			quit = board.OpenCurrentCell()
 		}
 
 		if quit {
 			break
 		}
 
-		printBoard(&board)
+		printBoard(board)
 	}
 }
 
