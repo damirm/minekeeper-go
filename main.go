@@ -198,7 +198,7 @@ func max(a, b int) int {
 }
 
 func random(from, to int) int {
-	return rand.Intn(to) + from
+	return rand.Intn(to-from) + from
 }
 
 func printBoard(board *Board) {
