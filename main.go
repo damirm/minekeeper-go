@@ -42,20 +42,22 @@ type Board struct {
 }
 
 func NewBoard(width, height int) *Board {
-	cells := make([][]int, height)
-	for i := range cells {
-		cells[i] = make([]int, width)
-	}
-	states := make([][]CellState, width)
-	for i := range states {
-		states[i] = make([]CellState, width)
-	}
-	return &Board{
-		cells:  cells,
-		states: states,
+	b := &Board{
 		width:  width,
 		height: height,
 		cursor: &Point{0, 0},
+	}
+	return b
+}
+
+func (b *Board) init() {
+	b.cells = make([][]int, b.height)
+	for i := range b.cells {
+		b.cells[i] = make([]int, b.width)
+	}
+	b.states = make([][]CellState, b.width)
+	for i := range b.states {
+		b.states[i] = make([]CellState, b.width)
 	}
 }
 
@@ -72,6 +74,8 @@ func (b *Board) GetCellState(x, y int) CellState {
 }
 
 func (b *Board) Randomize(bombRate float64) {
+	b.init()
+
 	bombsCount := math.Floor(float64(b.height*b.width) * (bombRate / 100.0))
 	cnt := 0.0
 	for cnt < bombsCount {
@@ -102,6 +106,9 @@ func (b *Board) OpenCurrentCell() bool {
 		b.gameover = true
 	}
 	b.states[b.cursor.y][b.cursor.x] = CellStateOpened
+
+	// TODO: Expand neighbors.
+
 	return b.gameover
 }
 
@@ -269,6 +276,8 @@ func loop() {
 			board.MarkCurrentCell()
 		case 'q':
 			quit = true
+		case 'r':
+			board.Randomize(BOMB_RATE)
 		case ' ':
 			quit = board.OpenCurrentCell()
 		}
