@@ -47,6 +47,7 @@ func NewBoard(width, height int) *Board {
 		height: height,
 		cursor: &Point{0, 0},
 	}
+	b.init()
 	return b
 }
 
@@ -102,14 +103,29 @@ func (b *Board) ResetCells() {
 }
 
 func (b *Board) OpenCurrentCell() bool {
-	if b.cells[b.cursor.y][b.cursor.x] == 1 {
+	b.openCell(b.cursor.x, b.cursor.y)
+	if !b.gameover {
+		b.expandNeighbors(b.cursor.x, b.cursor.y)
+	}
+	return b.gameover
+}
+
+func (b *Board) openCell(x, y int) {
+	if b.cells[y][x] == 1 {
 		b.gameover = true
 	}
-	b.states[b.cursor.y][b.cursor.x] = CellStateOpened
+	b.states[y][x] = CellStateOpened
+}
 
-	// TODO: Expand neighbors.
-
-	return b.gameover
+func (b *Board) expandNeighbors(x, y int) {
+	if b.CountBombsAround(x, y) == 0 {
+		b.loopAround(x, y, func(nx, ny int) {
+			if b.states[ny][nx] != CellStateOpened {
+				b.openCell(nx, ny)
+				b.expandNeighbors(nx, ny)
+			}
+		})
+	}
 }
 
 func (b *Board) OpenAllCells() {
@@ -172,6 +188,16 @@ func (b *Board) SetCursor(cursor *Point) {
 func (b *Board) CountBombsAround(x, y int) int {
 	var res int
 
+	b.loopAround(x, y, func(nx, ny int) {
+		if b.cells[ny][nx] == 1 {
+			res++
+		}
+	})
+
+	return res
+}
+
+func (b *Board) loopAround(x, y int, cb func(int, int)) {
 	for iy := -1; iy <= 1; iy++ {
 		for ix := -1; ix <= 1; ix++ {
 			if iy != 0 || ix != 0 {
@@ -179,15 +205,11 @@ func (b *Board) CountBombsAround(x, y int) int {
 				ny := y + iy
 
 				if nx >= 0 && nx < b.width && ny >= 0 && ny < b.height {
-					if b.cells[ny][nx] == 1 {
-						res++
-					}
+					cb(nx, ny)
 				}
 			}
 		}
 	}
-
-	return res
 }
 
 func min(a, b int) int {
