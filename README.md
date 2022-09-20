@@ -5,12 +5,17 @@
 ./build.sh && ./main
 ```
 
-## Keyboard
+## Keys
 
-* hjkl - movements
-* space - open cell
-* m - mark cell as bomb (symbol "!"), mark cell as unknown (symbol "?")
-* q - quit
+| Key | Description |
+|-----|-------------|
+| <kbd>h</kbd>   | Move left   |
+| <kbd>j</kbd>   | Move down   |
+| <kbd>k</kbd>   | Move up   |
+| <kbd>l</kbd>   | Move right   |
+| <kbd> </kbd> | open cell |
+| <kbd>m</kbd> | mark cell as bomb (symbol "!"), mark cell as unknown (symbol "?") |
+| <kbd>q</kbd> | quit |
 
 ```
 $ ./build.sh && ./main
